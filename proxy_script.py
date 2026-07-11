@@ -1,8 +1,23 @@
+import datetime
+import os
 import sqlite3
 
 from mitmproxy import http
 
 DB_FILE = "/app/data/proxy_vault.db"
+LOG_FILE = "/app/data/proxy.log"
+
+
+def write_log(method, host, path, action):
+    """Append a structured log line to the shared log file."""
+    try:
+        os.makedirs("/app/data", exist_ok=True)
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        line = f"{timestamp} | {method:<4} | {host}{path} | {action}\n"
+        with open(LOG_FILE, "a") as f:
+            f.write(line)
+    except Exception:
+        pass
 
 
 def get_live_mappings():
@@ -49,8 +64,9 @@ def request(flow: http.HTTPFlow) -> None:
             )
             swapped = True
 
-        # Log visibility tracking inside Dokploy containers
         if swapped:
-            print(
-                f"[API ProxyGuard] Swapped placeholder for tool: {api_name}", flush=True
+            msg = f"Swapped {api_name} key"
+            print(f"[API ProxyGuard] {msg}", flush=True)
+            write_log(
+                flow.request.method, flow.request.pretty_host, flow.request.path, msg
             )

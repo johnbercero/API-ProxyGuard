@@ -1,9 +1,10 @@
+import asyncio
 import os
 import secrets
 import sqlite3
 
 from fastapi import Depends, FastAPI, Form, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 app = FastAPI()
@@ -16,6 +17,7 @@ async def health():
 
 security = HTTPBasic()
 DB_FILE = "/app/data/proxy_vault.db"
+LOG_FILE = "/app/data/proxy.log"
 
 # 🔒 SECURITY DEFINITIONS: Change these to your preferred login details
 ADMIN_USERNAME = os.getenv("PROXY_USER", "jrb-admin")
@@ -156,6 +158,24 @@ async def dashboard(username: str = Depends(authenticate_user)):
             }}
             .terminal-box .label {{ color: #7dd3fc; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.5rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
             .terminal-box code {{ color: #f472b6; }}
+            .log-viewer {{
+                background: rgba(0,0,0,0.4);
+                border: 1px solid rgba(255,255,255,0.06);
+                border-radius: 12px;
+                height: 240px;
+                overflow-y: auto;
+                padding: 0.75rem 1rem;
+                font-family: 'SF Mono', 'Fira Code', monospace;
+                font-size: 0.75rem;
+                line-height: 1.7;
+                white-space: nowrap;
+            }}
+            .log-viewer .line {{ color: #ccc; }}
+            .log-viewer .line.dim {{ color: #555; }}
+            .log-status {{
+                font-size: 0.7rem;
+                transition: color 0.3s;
+            }}
         </style>
     </head>
     <body>
@@ -212,11 +232,95 @@ async def dashboard(username: str = Depends(authenticate_user)):
                 <code>export http_proxy=http://127.0.0.1:8080</code><br>
                 <code>export https_proxy=http://127.0.0.1:8080</code>
             </div>
+
+            <div class="card">
+                <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>📡 Live Proxy Logs</span>
+                    <span id="log-status" class="log-status" style="color:#555;">● waiting...</span>
+                </div>
+                <div id="log-viewer" class="log-viewer">
+                    <div class="line dim">Waiting for proxy traffic...</div>
+                </div>
+            </div>
         </div>
+        <script>
+            fetch('/logs')
+                .then(r => r.json())
+                .then(data => {{
+                    const viewer = document.getElementById('log-viewer');
+                    viewer.innerHTML = '';
+                    if (data.logs.length === 0) {{
+                        const div = document.createElement('div');
+                        div.className = 'line dim';
+                        div.textContent = 'No recent logs. Make a request through the proxy.';
+                        viewer.appendChild(div);
+                    }} else {{
+                        data.logs.forEach(line => {{
+                            const div = document.createElement('div');
+                            div.className = 'line';
+                            div.textContent = line;
+                            viewer.appendChild(div);
+                        }});
+                    }}
+                    viewer.scrollTop = viewer.scrollHeight;
+                }})
+                .catch(() => {{
+                    const viewer = document.getElementById('log-viewer');
+                    viewer.innerHTML = '<div class="line dim">Could not load logs.</div>';
+                }});
+            if (window.EventSource) {{
+                const source = new EventSource('/logs/stream');
+                source.onmessage = function(e) {{
+                    const viewer = document.getElementById('log-viewer');
+                    const dim = viewer.querySelector('.dim');
+                    if (dim) dim.remove();
+                    const div = document.createElement('div');
+                    div.className = 'line';
+                    div.textContent = e.data;
+                    viewer.appendChild(div);
+                    viewer.scrollTop = viewer.scrollHeight;
+                    const status = document.getElementById('log-status');
+                    status.textContent = '● live';
+                    status.style.color = '#34d399';
+                }};
+                source.onerror = function() {{
+                    const status = document.getElementById('log-status');
+                    status.textContent = '● disconnected';
+                    status.style.color = '#f87171';
+                }};
+            }}
+        </script>
     </body>
     </html>
     """
     return HTMLResponse(content=html_content)
+
+
+@app.get("/logs")
+async def get_logs(username: str = Depends(authenticate_user), lines: int = 50):
+    if not os.path.exists(LOG_FILE):
+        return {"logs": []}
+    with open(LOG_FILE, "r") as f:
+        all_lines = f.readlines()
+    last_lines = all_lines[-lines:]
+    return {"logs": [line.strip() for line in last_lines]}
+
+
+@app.get("/logs/stream")
+async def stream_logs(username: str = Depends(authenticate_user)):
+    async def event_generator():
+        while not os.path.exists(LOG_FILE):
+            await asyncio.sleep(0.5)
+        with open(LOG_FILE, "r") as f:
+            f.seek(0, 2)
+            while True:
+                line = f.readline()
+                if line:
+                    yield f"data: {line.strip()}\n\n"
+                else:
+                    await asyncio.sleep(0.5)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @app.post("/save")
