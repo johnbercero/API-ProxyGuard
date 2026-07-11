@@ -138,8 +138,8 @@ abc123def456   api-proxyguard-apiguard   "/app/entrypoint.sh"   Up 2 minutes   0
 Visit [**http://localhost:8000**](http://localhost:8000) in your browser.
 
 Default login:
-- **Username**: `jrb-admin`
-- **Password**: `orecreB!`
+- **Username**: `proxy_admin`
+- **Password**: `proxy_password`
 
 ---
 
@@ -152,7 +152,7 @@ Open `http://localhost:8000` and log in. You'll see:
 ```
 ┌──────────────────────────────────────┐
 │  🔐 ProxyGuard Vault                  │
-│  jrb-admin · ● Live                   │
+│  proxy_admin · ● Live                   │
 ├──────────────────────────────────────┤
 │  ➕ Add Key Mapping                   │
 │  ┌──────────┬────────────┬──────────┐ │
@@ -322,8 +322,8 @@ The log viewer uses **Server-Sent Events (SSE)** for real-time updates — no pa
 
 | Variable | Default | Description |
 |---|---|---|
-| `PROXY_USER` | `jrb-admin` | Dashboard admin username |
-| `PROXY_PASS` | `orecreB!` | Dashboard admin password |
+| `PROXY_USER` | `proxy_admin` | Dashboard admin username |
+| `PROXY_PASS` | `proxy_password` | Dashboard admin password |
 
 Set them in your `docker-compose.yml` or in a `.env` file:
 

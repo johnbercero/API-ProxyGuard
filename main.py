@@ -25,8 +25,8 @@ DB_FILE = "/app/data/proxy_vault.db"
 LOG_FILE = "/app/data/proxy.log"
 
 # 🔒 SECURITY DEFINITIONS: Change these to your preferred login details
-ADMIN_USERNAME = os.getenv("PROXY_USER", "jrb-admin")
-ADMIN_PASSWORD = os.getenv("PROXY_PASS", "orecreB!")
+ADMIN_USERNAME = os.getenv("PROXY_USER", "proxy_admin")
+ADMIN_PASSWORD = os.getenv("PROXY_PASS", "proxy_password")
 
 
 def init_db():
