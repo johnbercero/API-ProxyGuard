@@ -66,14 +66,14 @@ async def dashboard(username: str = Depends(authenticate_user)):
     for tool, fake, real in rows:
         masked_real = real[:6] + "********" if len(real) > 6 else "********"
         table_rows += f"""
-        <tr class="border-b border-gray-700">
-            <td class="p-3 text-emerald-400 font-medium">{tool}</td>
-            <td class="p-3 font-mono text-gray-300">{fake}</td>
-            <td class="p-3 font-mono text-gray-500">{masked_real}</td>
-            <td class="p-3">
-                <form action="/delete" method="POST" class="inline">
+        <tr>
+            <td class="tool-name">{tool}</td>
+            <td class="fake-key">{fake}</td>
+            <td class="real-key">{masked_real}</td>
+            <td style="text-align:center;">
+                <form action="/delete" method="POST" style="display:inline;">
                     <input type="hidden" name="tool_name" value="{tool}">
-                    <button type="submit" class="text-red-400 hover:text-red-600 text-sm font-semibold">Delete</button>
+                    <button type="submit" class="btn btn-danger" style="padding:0.3rem 0.8rem; font-size:0.75rem;">✕</button>
                 </form>
             </td>
         </tr>
@@ -81,61 +81,136 @@ async def dashboard(username: str = Depends(authenticate_user)):
 
     html_content = f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
-        <script src="https://tailwindcss.com"></script>
-        <title>Privacy Guard Studio</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ProxyGuard Vault</title>
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+                min-height: 100vh; color: #e0e0e0; padding: 2rem 1rem;
+            }}
+            .container {{ max-width: 800px; margin: 0 auto; }}
+            .header {{
+                background: rgba(255,255,255,0.04);
+                backdrop-filter: blur(12px);
+                border: 1px solid rgba(255,255,255,0.06);
+                border-radius: 16px; padding: 1.5rem 2rem;
+                margin-bottom: 1.5rem;
+                display: flex; justify-content: space-between; align-items: center;
+            }}
+            .header h1 {{ font-size: 1.4rem; font-weight: 700; color: #7dd3fc; }}
+            .header h1 span {{ color: #f472b6; }}
+            .header .meta {{ font-size: 0.8rem; color: #888; }}
+            .header .meta strong {{ color: #b0b0b0; }}
+            .badge {{ display: inline-block; padding: 0.15rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }}
+            .badge-green {{ background: rgba(52,211,153,0.15); color: #34d399; }}
+            .card {{
+                background: rgba(255,255,255,0.04);
+                backdrop-filter: blur(12px);
+                border: 1px solid rgba(255,255,255,0.06);
+                border-radius: 16px; padding: 1.5rem 2rem;
+                margin-bottom: 1.5rem;
+            }}
+            .card-title {{ font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #888; margin-bottom: 1rem; }}
+            .form-grid {{ display: grid; grid-template-columns: 1fr; gap: 1rem; }}
+            @media (min-width: 640px) {{ .form-grid {{ grid-template-columns: 1fr 1fr 1fr; }} .form-actions {{ grid-column: 1 / -1; }} }}
+            .form-group {{ display: flex; flex-direction: column; gap: 0.3rem; }}
+            .form-group label {{ font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #999; }}
+            .form-group input {{
+                background: rgba(0,0,0,0.3);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 10px; padding: 0.65rem 0.9rem;
+                font-size: 0.85rem; color: #e0e0e0;
+                outline: none; transition: border-color 0.2s;
+            }}
+            .form-group input:focus {{ border-color: #7dd3fc; }}
+            .form-group input::placeholder {{ color: #555; }}
+            .btn {{
+                display: inline-flex; align-items: center; gap: 0.4rem;
+                padding: 0.65rem 1.4rem; border-radius: 10px;
+                font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer;
+                transition: all 0.2s; text-decoration: none;
+            }}
+            .btn-primary {{ background: linear-gradient(135deg, #7dd3fc, #38bdf8); color: #0f0f1a; }}
+            .btn-primary:hover {{ transform: translateY(-1px); box-shadow: 0 4px 20px rgba(56,189,248,0.3); }}
+            .btn-danger {{ background: rgba(239,68,68,0.12); color: #f87171; }}
+            .btn-danger:hover {{ background: rgba(239,68,68,0.2); }}
+            .table-wrap {{ overflow-x: auto; }}
+            table {{ width: 100%; border-collapse: collapse; font-size: 0.85rem; }}
+            th {{ text-align: left; padding: 0.75rem 0.5rem; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #777; border-bottom: 1px solid rgba(255,255,255,0.06); }}
+            td {{ padding: 0.75rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.04); }}
+            .tool-name {{ color: #7dd3fc; font-weight: 600; }}
+            .fake-key {{ font-family: 'SF Mono', 'Fira Code', monospace; color: #a78bfa; font-size: 0.8rem; }}
+            .real-key {{ font-family: 'SF Mono', 'Fira Code', monospace; color: #555; font-size: 0.8rem; }}
+            .empty-msg {{ text-align: center; padding: 2rem 0; color: #666; font-size: 0.85rem; }}
+            .terminal-box {{
+                background: rgba(0,0,0,0.3);
+                border: 1px solid rgba(255,255,255,0.06);
+                border-radius: 12px; padding: 1rem 1.5rem;
+                font-family: 'SF Mono', 'Fira Code', monospace;
+                font-size: 0.8rem; line-height: 1.8;
+            }}
+            .terminal-box .label {{ color: #7dd3fc; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.5rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
+            .terminal-box code {{ color: #f472b6; }}
+        </style>
     </head>
-    <body class="bg-gray-900 text-white font-sans p-8">
-        <div class="max-w-3xl mx-auto bg-gray-800 p-6 rounded-lg shadow-2xl border border-gray-700">
-            <div class="flex justify-between items-center mb-6">
+    <body>
+        <div class="container">
+            <div class="header">
                 <div>
-                    <h1 class="text-2xl font-bold text-emerald-400">🛡️ Privacy Proxy Vault</h1>
-                    <p class="text-sm text-gray-400">User: <span class="text-gray-300 font-semibold">{username}</span> | Status: <span class="text-emerald-500 font-bold">● SECURE</span></p>
+                    <h1>🔐 Proxy<span>Guard</span> Vault</h1>
+                    <div class="meta"><strong>{username}</strong> · <span class="badge badge-green">● Live</span></div>
                 </div>
             </div>
 
-            <!-- Key Input Form -->
-            <form action="/save" method="POST" class="bg-gray-900 p-4 rounded-lg mb-8 grid grid-cols-1 md:grid-cols-3 gap-4 border border-gray-700">
-                <div>
-                    <label class="block text-xs uppercase text-gray-400 mb-1 font-bold">Tool/Vendor Name</label>
-                    <input type="text" name="tool_name" placeholder="e.g. Tavily" class="w-full bg-gray-800 p-2 rounded border border-gray-700 text-sm text-white focus:outline-none focus:border-emerald-500" required>
-                </div>
-                <div>
-                    <label class="block text-xs uppercase text-gray-400 mb-1 font-bold">Fake Token Name</label>
-                    <input type="text" name="fake_key" placeholder="e.g. FAKE_TAVILY_KEY" class="w-full bg-gray-800 p-2 rounded border border-gray-700 text-sm text-white focus:outline-none focus:border-emerald-500" required>
-                </div>
-                <div>
-                    <label class="block text-xs uppercase text-gray-400 mb-1 font-bold">Real Private Key</label>
-                    <input type="password" name="real_key" placeholder="Paste actual secret" class="w-full bg-gray-800 p-2 rounded border border-gray-700 text-sm text-white focus:outline-none focus:border-emerald-500" required>
-                </div>
-                <div class="md:col-span-3 flex justify-end">
-                    <button type="submit" class="bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded text-sm font-semibold transition shadow-md">Add/Update Key</button>
-                </div>
-            </form>
-
-            <!-- Storage Matrix -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b border-gray-700 text-gray-400 text-xs uppercase">
-                            <th class="p-3">Vendor</th>
-                            <th class="p-3">Fake Placeholder</th>
-                            <th class="p-3">Real Key Status</th>
-                            <th class="p-3">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {table_rows if table_rows else '<tr><td colspan="4" class="p-4 text-center text-gray-500 text-sm">No keys stored yet. Register your first mapping above!</td></tr>'}
-                    </tbody>
-                </table>
+            <div class="card">
+                <div class="card-title">➕ Add Key Mapping</div>
+                <form action="/save" method="POST" class="form-grid">
+                    <div class="form-group">
+                        <label>Tool / Vendor</label>
+                        <input type="text" name="tool_name" placeholder="e.g. OpenAI" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Fake Key Name</label>
+                        <input type="text" name="fake_key" placeholder="e.g. FAKE_OPENAI_KEY" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Real Private Key</label>
+                        <input type="password" name="real_key" placeholder="sk-..." required>
+                    </div>
+                    <div class="form-actions" style="display: flex; justify-content: flex-end;">
+                        <button type="submit" class="btn btn-primary">+ Add / Update</button>
+                    </div>
+                </form>
             </div>
 
-            <div class="mt-8 bg-gray-900 p-4 rounded text-xs font-mono text-gray-400 border border-gray-800 space-y-1">
-                <p class="text-emerald-400 font-bold mb-1">💡 Terminal Hook Activation Commands:</p>
-                <p>export http_proxy=http://127.0.0.1:8080</p>
-                <p>export https_proxy=http://127.0.0.1:8080</p>
-                <p>export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt</p>
+            <div class="card">
+                <div class="card-title">🗄️ Stored Mappings</div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Vendor</th>
+                                <th>Fake Key</th>
+                                <th>Real Key</th>
+                                <th style="text-align:center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {table_rows if table_rows else '<tr><td colspan="4" class="empty-msg">No keys yet. Add your first mapping above.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="terminal-box">
+                <div class="label">💻 Terminal Setup</div>
+                <code>export http_proxy=http://127.0.0.1:8080</code><br>
+                <code>export https_proxy=http://127.0.0.1:8080</code>
             </div>
         </div>
     </body>
