@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  api-proxyguard:
+    build: .
+    ports:
+      - "8000:8000" # Web Dashboard Endpoint
+      - "127.0.0.1:8080:8080" # Loopback restricted proxy port
+    volumes:
+      - ./data:/app/data # Database persistence link
+    restart: always
