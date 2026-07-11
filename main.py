@@ -4,7 +4,12 @@ import secrets
 import sqlite3
 
 from fastapi import Depends, FastAPI, Form, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    RedirectResponse,
+    StreamingResponse,
+)
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 app = FastAPI()
@@ -234,6 +239,17 @@ async def dashboard(username: str = Depends(authenticate_user)):
             </div>
 
             <div class="card">
+                <div class="card-title">🔒 CA Certificate</div>
+                <p style="font-size:0.8rem; color:#999; margin-bottom:0.8rem;">
+                    Install the proxy CA certificate to avoid using <code>-k</code> with curl.
+                    Download and double-click the file to install on your system.
+                </p>
+                <a href="/ca-cert" class="btn btn-primary" style="font-size:0.75rem; padding:0.5rem 1rem;">
+                    ⬇️ Download CA Certificate
+                </a>
+            </div>
+
+            <div class="card">
                 <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
                     <span>📡 Live Proxy Logs</span>
                     <span id="log-status" class="log-status" style="color:#555;">● waiting...</span>
@@ -321,6 +337,24 @@ async def stream_logs(username: str = Depends(authenticate_user)):
                     await asyncio.sleep(0.5)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+CA_CERT_PATH = os.path.expanduser("~/.mitmproxy/mitmproxy-ca-cert.pem")
+
+
+@app.get("/ca-cert")
+async def download_ca_cert(username: str = Depends(authenticate_user)):
+    if not os.path.exists(CA_CERT_PATH):
+        return HTMLResponse(
+            "<h3>CA certificate not yet generated.</h3>"
+            "<p>Make a request through the proxy first to trigger certificate generation, then reload this page.</p>",
+            status_code=404,
+        )
+    return FileResponse(
+        CA_CERT_PATH,
+        media_type="application/x-x509-ca-cert",
+        filename="mitmproxy-ca-cert.pem",
+    )
 
 
 @app.post("/save")

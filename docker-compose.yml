@@ -8,4 +8,5 @@ services:
       - "127.0.0.1:8080:8080" # Loopback restricted proxy port
     volumes:
       - ./data:/app/data # Database persistence link
+      - ./mitmproxy-ca:/root/.mitmproxy # CA certificate persistence
     restart: always

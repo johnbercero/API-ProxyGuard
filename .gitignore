@@ -21,8 +21,9 @@ env/
 .env/
 .venv_*/
 
-# --- Database (local data volume) ---
+# --- Database & Certs (local data volumes) ---
 data/
+mitmproxy-ca/
 *.db
 *.sqlite
 *.sqlite3

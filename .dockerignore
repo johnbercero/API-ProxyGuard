@@ -9,6 +9,7 @@ __pycache__
 !.env.example
 README.md
 data/
+mitmproxy-ca/
 *.log
 .vscode/
 .idea/
