@@ -7,6 +7,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 app = FastAPI()
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 security = HTTPBasic()
 DB_FILE = "/app/data/proxy_vault.db"
 

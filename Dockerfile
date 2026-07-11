@@ -17,9 +17,18 @@ RUN apt-get purge -y --auto-remove gcc g++ libc6-dev
 
 COPY . .
 
+# Create a wrapper script that runs both processes with proper signal handling
+RUN printf '#!/bin/sh\n\
+mitmdump -s /app/proxy_script.py --set block_global=false --listen-host 0.0.0.0 &\n\
+MITM_PID=$!\n\
+uvicorn main:app --host 0.0.0.0 --port 8000 &\n\
+UVICORN_PID=$!\n\
+trap "kill $MITM_PID $UVICORN_PID 2>/dev/null; exit 0" SIGTERM SIGINT\n\
+wait\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
 # Expose Web Interface (8000) and Local Proxy Engine (8080)
 EXPOSE 8000
 EXPOSE 8080
 
-# Clean executable array wrapper handling OS signals cleanly
-CMD ["sh", "-c", "mitmdump -s proxy_script.py --set block_global=false & uvicorn main:app --host 0.0.0.0 --port 8000"]
+# Use the wrapper script as entrypoint
+CMD ["/app/entrypoint.sh"]
